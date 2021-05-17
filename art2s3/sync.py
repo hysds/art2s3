@@ -30,6 +30,12 @@ def _sync(art_path, s3_path, api_key):
     for path in _walk(art_path, api_key):
         rel_path = path.replace(art_path, '')
         s3_abs_path = os.path.join(s3_path, rel_path)
+        # skip transfer if object already exists
+        try:
+            with open(s3_abs_path):
+                print(f"{s3_abs_path} already exists. Skipping.")
+        except OSError:
+            pass
         print(f"Copying {path} -> {s3_abs_path}...", end='') 
         with open(s3_abs_path, 'wb') as fout:
             for line in open(path, 'rb'):
