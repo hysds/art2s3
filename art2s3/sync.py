@@ -42,6 +42,7 @@ def _sync(art_path, s3_path, api_key):
         try:
             with open(s3_abs_path):
                 logger.info(f"{s3_abs_path} already exists. Skipping.")
+                continue
         except OSError:
             pass
         logger.info(f"Copying {path} -> {s3_abs_path}...")
