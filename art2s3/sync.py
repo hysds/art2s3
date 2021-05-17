@@ -1,7 +1,15 @@
 import os
+import logging
 import click
 from artifactory import ArtifactoryPath
 from smart_open import open
+
+
+# set logger
+log_format = "[%(asctime)s: %(levelname)s/%(funcName)s] %(message)s"
+logging.basicConfig(format=log_format, level=logging.INFO)
+logger = logging.getLogger('art2s3.sync')
+logger.setLevel(logging.INFO)
 
 
 def _walk(path, api_key):
@@ -20,7 +28,7 @@ def _walk(path, api_key):
 @click.option('--api_key', help="Artifactory API key")
 def walk(path, api_key):
     for i in _walk(path, api_key):
-        print(i)
+        logger.info(i)
 
 
 def _sync(art_path, s3_path, api_key):
@@ -33,14 +41,14 @@ def _sync(art_path, s3_path, api_key):
         # skip transfer if object already exists
         try:
             with open(s3_abs_path):
-                print(f"{s3_abs_path} already exists. Skipping.")
+                logger.info(f"{s3_abs_path} already exists. Skipping.")
         except OSError:
             pass
-        print(f"Copying {path} -> {s3_abs_path}...", end='') 
+        logger.info(f"Copying {path} -> {s3_abs_path}...")
         with open(s3_abs_path, 'wb') as fout:
             for line in open(path, 'rb'):
                 fout.write(line)
-        print("done.")
+        logger.info("done.")
 
 
 @click.command()
