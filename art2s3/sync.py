@@ -35,7 +35,7 @@ def _sync(art_path, s3_path, api_key):
     """Function to recursively walk an artifactory path and
        copy over artifacts to an S3 location."""
 
-    for path in _walk(art_path, api_key):
+    for path in list(_walk(art_path, api_key)):
         rel_path = path.replace(art_path, '')
         s3_abs_path = os.path.join(s3_path, rel_path)
         # skip transfer if object already exists
