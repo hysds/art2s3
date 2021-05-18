@@ -1,6 +1,28 @@
 # art2s3
 Tools for syncing artifacts from Artifactory to S3.
 
+## Installation
+1. Clone and create virtualenv:
+   ```
+   git clone https://github.com/hysds/art2s3.git
+   cd art2s3
+   virtualenv env
+   source env/bin/activate
+   ```
+
+2. Install:
+   Using pip:
+   ```
+   pip install .
+   ```
+
+   or using poetry:
+   ```
+   pip install poetry
+   poetry install
+   ```
+
+## Usage
 ```
 $ art2s3 --help
 Usage: art2s3 [OPTIONS] COMMAND [ARGS]...
@@ -13,7 +35,7 @@ Commands:
   walk
 ```
 
-## walk
+### walk
 Recursively print out all artifacts under an artifactory URL:
 
 ```
@@ -25,7 +47,7 @@ Options:
   --help          Show this message and exit.
 ```
 
-## sync
+### sync
 Recursively sync all artifacts under an artifactory URL to an S3 location:
 
 ```
