@@ -10,8 +10,7 @@ Tools for syncing artifacts from Artifactory to S3.
    source env/bin/activate
    ```
 
-2. Install:
-   Using pip:
+2. Install using pip:
    ```
    pip install .
    ```
