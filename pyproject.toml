@@ -3,6 +3,7 @@ name = "art2s3"
 version = "0.1.0"
 description = ""
 authors = ["Gerald Manipon <pymonger@gmail.com>"]
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.7"
