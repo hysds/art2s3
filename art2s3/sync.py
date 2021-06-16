@@ -1,6 +1,10 @@
 import os
+import re
 import logging
 import click
+import boto3
+import botocore
+from pytz import timezone
 from artifactory import ArtifactoryPath
 from smart_open import open
 
@@ -12,6 +16,10 @@ logger = logging.getLogger('art2s3.sync')
 logger.setLevel(logging.INFO)
 
 
+# regular expressions
+S3_URL_RE = re.compile(r's3s?://(.+?)/(.+)$')
+
+
 def _walk(path, api_key):
     """Function to recursively walk an artifactory path."""
 
@@ -20,14 +28,14 @@ def _walk(path, api_key):
         if p.is_dir():
             yield from _walk(str(p), api_key)
         else:
-            yield str(p)
+            yield str(p), p.stat()
 
 
 @click.command()
 @click.argument('path')
 @click.option('--api_key', help="Artifactory API key")
 def walk(path, api_key):
-    for i in _walk(path, api_key):
+    for i, stat in _walk(path, api_key):
         logger.info(i)
 
 
@@ -35,21 +43,34 @@ def _sync(art_path, s3_path, api_key):
     """Function to recursively walk an artifactory path and
        copy over artifacts to an S3 location."""
 
-    for path in list(_walk(art_path, api_key)):
+    client = boto3.client('s3')
+    for path, stat in list(_walk(art_path, api_key)):
         rel_path = path.replace(art_path, '')
         s3_abs_path = os.path.join(s3_path, rel_path)
+        match = S3_URL_RE.search(s3_abs_path)
+        if not match:
+            raise RuntimeError("Failed to parse S3 url.")
+        bucket, key = match.groups()
+        logger.info(f"bucket: {bucket} key: {key}")
+        #logger.info(f"art stat: {stat}")
+        mtime_art = stat.mtime.astimezone(timezone('UTC'))
+        logger.info(f"art mtime: {mtime_art}")
         # skip transfer if object already exists
         try:
-            with open(s3_abs_path):
-                logger.info(f"{s3_abs_path} already exists. Skipping.")
-                continue
-        except OSError:
-            pass
-        logger.info(f"Copying {path} -> {s3_abs_path}...")
-        with open(s3_abs_path, 'wb') as fout:
-            for line in open(path, 'rb'):
-                fout.write(line)
-        logger.info("done.")
+            s3_met = client.head_object(Bucket=bucket, Key=key)
+            #logger.info(f"s3_met: {s3_met}")
+            mtime_s3 = s3_met['LastModified'].astimezone(timezone('UTC'))
+            logger.info(f"s3 mtime: {mtime_s3}")
+        except botocore.exceptions.ClientError:
+            mtime_s3 = None
+        if mtime_s3 is None or mtime_art > mtime_s3:
+            logger.info(f"Copying {path} -> {s3_abs_path}...")
+            with open(s3_abs_path, 'wb') as fout:
+                for line in open(path, 'rb'):
+                    fout.write(line)
+            logger.info("done.")
+        else:
+            logger.info(f"{s3_abs_path} is already current. Skipping.")
 
 
 @click.command()
