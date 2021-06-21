@@ -28,15 +28,15 @@ def _walk(path, api_key):
         if p.is_dir():
             yield from _walk(str(p), api_key)
         else:
-            yield str(p), p.stat()
+            yield p
 
 
 @click.command()
 @click.argument('path')
 @click.option('--api_key', help="Artifactory API key")
 def walk(path, api_key):
-    for i, stat in _walk(path, api_key):
-        logger.info(i)
+    for p in _walk(path, api_key):
+        logger.info(str(p))
 
 
 def _sync(art_path, s3_path, api_key):
@@ -44,7 +44,9 @@ def _sync(art_path, s3_path, api_key):
        copy over artifacts to an S3 location."""
 
     client = boto3.client('s3')
-    for path, stat in list(_walk(art_path, api_key)):
+    for p in list(_walk(art_path, api_key)):
+        path = str(p)
+        stat = p.stat()
         rel_path = path.replace(art_path, '')
         s3_abs_path = os.path.join(s3_path, rel_path)
         match = S3_URL_RE.search(s3_abs_path)
@@ -64,11 +66,21 @@ def _sync(art_path, s3_path, api_key):
         except botocore.exceptions.ClientError:
             mtime_s3 = None
         if mtime_s3 is None or mtime_art > mtime_s3:
-            logger.info(f"Copying {path} -> {s3_abs_path}...")
-            with open(s3_abs_path, 'wb') as fout:
-                for line in open(path, 'rb'):
-                    fout.write(line)
-            logger.info("done.")
+            local_file = os.path.basename(s3_abs_path)
+            try:
+                logger.info(f"Downloading {path}...")
+                with p.open() as f_in:
+                    with open(local_file, 'wb') as f_out:
+                        for line in f_in:
+                            f_out.write(line)
+                logger.info("done.")
+                logger.info(f"Uploading {local_file} -> {s3_abs_path}...")
+                with open(local_file, 'rb') as f_in:
+                    client.upload_fileobj(f_in, bucket, key)
+                logger.info("done.")
+            finally:
+                if os.path.exists(local_file):
+                    os.unlink(local_file)
         else:
             logger.info(f"{s3_abs_path} is already current. Skipping.")
 
