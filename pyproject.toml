@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-dohq-artifactory = "^0.7.574"
+dohq-artifactory = "^0.8.4"
 smart-open = {extras = ["s3"], version = "^5.0.0"}
 boto3 = "^1.17.73"
 click = "^8.0.0"
