@@ -4,6 +4,7 @@ import logging
 import click
 import boto3
 import botocore
+import backoff
 from pytz import timezone
 from artifactory import ArtifactoryPath
 from smart_open import open
@@ -18,6 +19,19 @@ logger.setLevel(logging.INFO)
 
 # regular expressions
 S3_URL_RE = re.compile(r's3s?://(.+?)/(.+)$')
+
+@backoff.on_exception(
+    backoff.expo, Exception, max_value=13, max_time=34
+)
+def backoff_wrapper(func, *args, **kwargs):
+    """
+    Run a function wrapped in exponential backoff.
+    :param func: function or method object
+    :param args: args to pass to function
+    :param kwargs: keyword args to pass to function
+    :return:
+    """
+    return func(*args, **kwargs)
 
 
 def _walk(path, api_key):
@@ -46,7 +60,7 @@ def _sync(art_path, s3_path, api_key):
     client = boto3.client('s3')
     for p in list(_walk(art_path, api_key)):
         path = str(p)
-        stat = p.stat()
+        stat = backoff_wrapper(p.stat)
         rel_path = path.replace(art_path, '')
         s3_abs_path = os.path.join(s3_path, rel_path)
         match = S3_URL_RE.search(s3_abs_path)
