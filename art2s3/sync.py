@@ -37,7 +37,7 @@ def backoff_wrapper(func, *args, **kwargs):
 def _walk(path, api_key):
     """Function to recursively walk an artifactory path."""
 
-    path = ArtifactoryPath(path, apikey=api_key)
+    path = ArtifactoryPath(path, apikey=api_key, verify=False)
     for p in path:
         if p.is_dir():
             yield from _walk(str(p), api_key)
