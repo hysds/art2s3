@@ -7,7 +7,7 @@ import botocore
 import backoff
 from pytz import timezone
 from artifactory import ArtifactoryPath
-from smart_open import open as smart_open
+from smart_open import open
 
 
 # set logger
